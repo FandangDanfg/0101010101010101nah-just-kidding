@@ -1,9 +1,16 @@
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Idle Multiplier Game</title>
+    <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Open Sans', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-weight: 300;
         }
         
         body {
@@ -50,7 +57,7 @@
         
         .counter-value {
             font-size: 48px;
-            font-weight: bold;
+            font-weight: 300;
             word-break: break-all;
             color: #e0e0e0;
         }
@@ -59,7 +66,7 @@
             font-size: 16px;
             margin-top: 10px;
             color: #888;
-            font-family: 'Open Sans', monospace;
+            font-weight: 300;
         }
         
         .multiplier-info {
@@ -105,7 +112,7 @@
         }
         
         .upgrade-title {
-            font-weight: bold;
+            font-weight: 300;
             font-size: 18px;
             margin-bottom: 5px;
         }
@@ -144,4 +151,301 @@
             font-size: 12px;
             margin-top: 10px;
         }
-    
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Idle Multiplier Game</h1>
+        
+        <div class="counter-display">
+            <div class="counter-label">Your Number</div>
+            <div class="counter-value" id="counter">1</div>
+            <div class="scientific-notation" id="scientific">10^0</div>
+            <div class="multiplier-info">Multiplying by <span id="mult-display">2</span>x every second</div>
+        </div>
+        
+        <div class="upgrades">
+            <button class="upgrade-btn" id="upgrade1">
+                <div class="upgrade-title">2x Multiplier Boost</div>
+                <div class="upgrade-desc">Cost: <span id="cost1">1000</span></div>
+                <div class="upgrade-desc">Level: <span id="level1">0</span></div>
+            </button>
+            
+            <button class="upgrade-btn" id="upgrade2">
+                <div class="upgrade-title">10x Multiplier Boost</div>
+                <div class="upgrade-desc">Cost: <span id="cost2">1e6</span></div>
+                <div class="upgrade-desc">Level: <span id="level2">0</span></div>
+            </button>
+            
+            <button class="upgrade-btn" id="upgrade3">
+                <div class="upgrade-title">100x Multiplier Boost</div>
+                <div class="upgrade-desc">Cost: <span id="cost3">1e12</span></div>
+                <div class="upgrade-desc">Level: <span id="level3">0</span></div>
+            </button>
+            
+            <button class="upgrade-btn" id="upgrade4">
+                <div class="upgrade-title">1000x Multiplier Boost</div>
+                <div class="upgrade-desc">Cost: <span id="cost4">1e20</span></div>
+                <div class="upgrade-desc">Level: <span id="level4">0</span></div>
+            </button>
+        </div>
+        
+        <div class="controls">
+            <button class="control-btn" id="saveBtn">Save Game</button>
+            <button class="control-btn" id="resetBtn">Reset Game</button>
+        </div>
+        
+        <div class="save-status" id="saveStatus">Auto-saving every 10 seconds...</div>
+    </div>
+
+    <script>
+        class BigNumber {
+            constructor(mantissa = 1, exponent = 0) {
+                this.mantissa = mantissa;
+                this.exponent = exponent;
+                this.normalize();
+            }
+            
+            normalize() {
+                if (this.mantissa === 0) {
+                    this.exponent = 0;
+                    return;
+                }
+                
+                while (Math.abs(this.mantissa) >= 10) {
+                    this.mantissa /= 10;
+                    this.exponent++;
+                }
+                
+                while (Math.abs(this.mantissa) < 1 && this.mantissa !== 0) {
+                    this.mantissa *= 10;
+                    this.exponent--;
+                }
+            }
+            
+            multiply(other) {
+                if (typeof other === 'number') {
+                    other = new BigNumber(other, 0);
+                }
+                return new BigNumber(
+                    this.mantissa * other.mantissa,
+                    this.exponent + other.exponent
+                );
+            }
+            
+            greaterThan(other) {
+                if (typeof other === 'number') {
+                    other = new BigNumber(other, 0);
+                }
+                if (this.exponent > other.exponent) return true;
+                if (this.exponent < other.exponent) return false;
+                return this.mantissa > other.mantissa;
+            }
+            
+            divide(other) {
+                if (typeof other === 'number') {
+                    other = new BigNumber(other, 0);
+                }
+                return new BigNumber(
+                    this.mantissa / other.mantissa,
+                    this.exponent - other.exponent
+                );
+            }
+            
+            toString() {
+                if (this.exponent < 3) {
+                    const num = this.mantissa * Math.pow(10, this.exponent);
+                    return Math.floor(num).toString();
+                }
+                
+                const suffixes = [
+                    '', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No',
+                    'Dc', 'UDc', 'DDc', 'TDc', 'QaDc', 'QiDc', 'SxDc', 'SpDc', 'OcDc', 'NoDc',
+                    'Vg', 'UVg', 'DVg', 'TVg', 'QaVg', 'QiVg', 'SxVg', 'SpVg', 'OcVg', 'NoVg',
+                    'Tg', 'UTg', 'DTg', 'TTg', 'QaTg', 'QiTg', 'SxTg', 'SpTg', 'OcTg', 'NoTg',
+                    'Qd', 'UQd', 'DQd', 'TQd', 'QaQd', 'QiQd', 'SxQd', 'SpQd', 'OcQd', 'NoQd',
+                    'Qq', 'UQq', 'DQq', 'TQq', 'QaQq', 'QiQq', 'SxQq', 'SpQq', 'OcQq', 'NoQq',
+                    'Sd', 'USd', 'DSd', 'TSd', 'QaSd', 'QiSd', 'SxSd', 'SpSd', 'OcSd', 'NoSd',
+                    'St', 'USt', 'DSt', 'TSt', 'QaSt', 'QiSt', 'SxSt', 'SpSt', 'OcSt', 'NoSt',
+                    'Og', 'UOg', 'DOg', 'TOg', 'QaOg', 'QiOg', 'SxOg', 'SpOg', 'OcOg', 'NoOg',
+                    'Ng', 'UNg', 'DNg', 'TNg', 'QaNg', 'QiNg', 'SxNg', 'SpNg', 'OcNg', 'NoNg',
+                    'Ce'
+                ];
+                
+                const expGroups = Math.floor(this.exponent / 3);
+                const displayMantissa = this.mantissa * Math.pow(10, this.exponent % 3);
+                
+                if (expGroups === 0) {
+                    return Math.floor(displayMantissa).toString();
+                }
+                
+                if (expGroups < suffixes.length) {
+                    return displayMantissa.toFixed(2) + suffixes[expGroups];
+                }
+                
+                const ones = ['', 'U', 'D', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No'];
+                const tens = ['', 'Dc', 'Vg', 'Tg', 'Qd', 'Qq', 'Sd', 'St', 'Og', 'Ng'];
+                const hundreds = ['', 'Ce', 'Du', 'Tc', 'Qr', 'Qg', 'Sc', 'Si', 'Oi', 'Ni'];
+                
+                let n = expGroups - 1;
+                let layers = [];
+                
+                while (n > 0) {
+                    let layerValue = n % 1000;
+                    if (layerValue > 0 || layers.length === 0) {
+                        const h = Math.floor(layerValue / 100);
+                        const t = Math.floor((layerValue % 100) / 10);
+                        const o = layerValue % 10;
+                        
+                        let name = '';
+                        if (o > 0) name += ones[o];
+                        if (t > 0) name += tens[t];
+                        if (h > 0) name += hundreds[h];
+                        
+                        if (name === '') name = 'Nl';
+                        
+                        layers.push(name);
+                    }
+                    n = Math.floor(n / 1000);
+                }
+                
+                let suffix = layers[0];
+                for (let i = 1; i < layers.length; i++) {
+                    suffix = layers[i] + '{' + suffix + '}';
+                }
+                
+                return displayMantissa.toFixed(2) + suffix;
+            }
+            
+            toJSON() {
+                return { mantissa: this.mantissa, exponent: this.exponent };
+            }
+            
+            static fromJSON(data) {
+                return new BigNumber(data.mantissa, data.exponent);
+            }
+        }
+        
+        let counter = new BigNumber(1, 0);
+        let multiplier = new BigNumber(2, 0);
+        
+        const upgrades = [
+            { level: 0, cost: new BigNumber(1000, 0), boost: new BigNumber(2, 0), costMult: 10 },
+            { level: 0, cost: new BigNumber(1, 6), boost: new BigNumber(10, 0), costMult: 100 },
+            { level: 0, cost: new BigNumber(1, 12), boost: new BigNumber(100, 0), costMult: 1000 },
+            { level: 0, cost: new BigNumber(1, 20), boost: new BigNumber(1000, 0), costMult: 10000 }
+        ];
+        
+        function saveGame() {
+            const saveData = {
+                counter: counter.toJSON(),
+                upgrades: upgrades.map(u => ({
+                    level: u.level,
+                    cost: u.cost.toJSON()
+                })),
+                timestamp: Date.now()
+            };
+            
+            const saveString = JSON.stringify(saveData);
+            const compressed = btoa(saveString);
+            document.cookie = `idleGame=${compressed}; max-age=31536000; path=/`;
+            
+            document.getElementById('saveStatus').textContent = 'Game saved successfully!';
+            setTimeout(() => {
+                document.getElementById('saveStatus').textContent = 'Auto-saving every 10 seconds...';
+            }, 2000);
+        }
+        
+        function loadGame() {
+            const cookies = document.cookie.split('; ');
+            const saveCookie = cookies.find(c => c.startsWith('idleGame='));
+            
+            if (saveCookie) {
+                try {
+                    const compressed = saveCookie.split('=')[1];
+                    const saveString = atob(compressed);
+                    const saveData = JSON.parse(saveString);
+                    
+                    counter = BigNumber.fromJSON(saveData.counter);
+                    
+                    for (let i = 0; i < upgrades.length; i++) {
+                        upgrades[i].level = saveData.upgrades[i].level;
+                        upgrades[i].cost = BigNumber.fromJSON(saveData.upgrades[i].cost);
+                    }
+                    
+                    calculateMultiplier();
+                    document.getElementById('saveStatus').textContent = 'Game loaded!';
+                    setTimeout(() => {
+                        document.getElementById('saveStatus').textContent = 'Auto-saving every 10 seconds...';
+                    }, 2000);
+                } catch (e) {
+                    console.error('Failed to load save:', e);
+                }
+            }
+        }
+        
+        function resetGame() {
+            if (confirm('Are you sure you want to reset your game? This cannot be undone!')) {
+                document.cookie = 'idleGame=; max-age=0; path=/';
+                location.reload();
+            }
+        }
+        
+        function updateDisplay() {
+            document.getElementById('counter').textContent = counter.toString();
+            
+            const totalExponent = counter.exponent + Math.log10(counter.mantissa);
+            document.getElementById('scientific').textContent = '10^' + totalExponent.toFixed(2);
+            
+            document.getElementById('mult-display').textContent = multiplier.toString();
+            
+            upgrades.forEach((upgrade, i) => {
+                const btn = document.getElementById(`upgrade${i + 1}`);
+                const canAfford = counter.greaterThan(upgrade.cost);
+                btn.disabled = !canAfford;
+                
+                document.getElementById(`cost${i + 1}`).textContent = upgrade.cost.toString();
+                document.getElementById(`level${i + 1}`).textContent = upgrade.level;
+            });
+        }
+        
+        function calculateMultiplier() {
+            multiplier = new BigNumber(2, 0);
+            upgrades.forEach(upgrade => {
+                for (let i = 0; i < upgrade.level; i++) {
+                    multiplier = multiplier.multiply(upgrade.boost);
+                }
+            });
+        }
+        
+        function buyUpgrade(index) {
+            const upgrade = upgrades[index];
+            if (counter.greaterThan(upgrade.cost)) {
+                counter = counter.divide(upgrade.cost);
+                upgrade.level++;
+                upgrade.cost = upgrade.cost.multiply(upgrade.costMult);
+                calculateMultiplier();
+                updateDisplay();
+            }
+        }
+        
+        document.getElementById('upgrade1').addEventListener('click', () => buyUpgrade(0));
+        document.getElementById('upgrade2').addEventListener('click', () => buyUpgrade(1));
+        document.getElementById('upgrade3').addEventListener('click', () => buyUpgrade(2));
+        document.getElementById('upgrade4').addEventListener('click', () => buyUpgrade(3));
+        document.getElementById('saveBtn').addEventListener('click', saveGame);
+        document.getElementById('resetBtn').addEventListener('click', resetGame);
+        
+        loadGame();
+        
+        setInterval(() => {
+            counter = counter.multiply(multiplier);
+            updateDisplay();
+        }, 1000);
+        
+        setInterval(saveGame, 10000);
+        
+        updateDisplay();
+    </script>
+</body>
+</html>
